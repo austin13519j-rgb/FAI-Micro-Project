@@ -29,17 +29,19 @@ from schemas import (
 )
 from planner import ForwardPlanner
 from scheduler import TaskScheduler
+from seed_data import seed_database
 import crud
 import report
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Ensure database tables are created
+    # Startup: Ensure database tables are created & seeded if empty
     try:
         init_db()
+        seed_database()
     except Exception as e:
-        print(f"[Startup Warning] Could not initialize database tables: {e}")
+        print(f"[Startup Warning] Could not initialize or seed database: {e}")
     yield
 
 

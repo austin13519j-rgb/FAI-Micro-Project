@@ -16,11 +16,15 @@ DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 # 2. Support standard PostgreSQL prefixes and Render/Neon quirks
 if DATABASE_URL:
-    # Some cloud providers (Render, Heroku) use 'postgres://' which SQLAlchemy 1.4+ rejects
+    # Some cloud providers (Render, Heroku) use 'postgres://' which SQLAlchemy 1.4+ rejects.
+    # In SQLAlchemy 2.1+, bare 'postgresql://' defaults to psycopg 3 ('import psycopg'),
+    # whereas psycopg2-binary requires 'postgresql+psycopg2://'.
+    # Normalize to postgresql+psycopg2:// to guarantee compatibility with psycopg2-binary.
     if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
-    # If psycopg 3 is installed, use psycopg driver dialect if needed, or default postgresql
     engine = create_engine(
         DATABASE_URL,
         pool_pre_ping=True,      # Verify connection validity before execution (critical for serverless Neon)

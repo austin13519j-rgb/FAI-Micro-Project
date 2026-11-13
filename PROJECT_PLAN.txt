@@ -1,0 +1,259 @@
+================================================================================
+           OPERATION THEATRE TURNAROUND PLANNER USING FORWARD PLANNING
+                       Complete Project Plan & Overview
+================================================================================
+
+ACADEMIC DETAILS:
+- Course: Fundamentals of Artificial Intelligence & Data Science
+- Level: First-Year B.Tech AI & Data Science Micro-Project
+- Course Outcomes: CO2 (State-Space Formulation), CO4 (Forward Planning Agent), 
+                   CO5 (Constraint & Infeasibility Analysis)
+
+
+--------------------------------------------------------------------------------
+1. WHAT IS THIS PROJECT IN SIMPLE WORDS?
+--------------------------------------------------------------------------------
+In hospitals, when one surgery ends, the Operation Theatre (OT) cannot be used 
+immediately for the next patient. Several things must happen first:
+1. The room must be cleaned and disinfected.
+2. The used surgical tools must be sterilised and cooled down.
+3. Fresh supplies, medicines, and disposables must be restocked.
+4. The surgical instrument table must be prepared by a specialized nurse.
+5. The next patient must be checked and rolled into the theatre.
+
+This entire gap between two surgeries is called the "Turnaround Time".
+
+If nurses and hospital staff do this scheduling by hand or guess, surgeries get 
+delayed, staff get double-booked, or patients wait needlessly.
+
+This project creates a smart "Forward Planning Agent" (an AI planning system) 
+that takes the surgery end time, available staff, and cleaning protocol, and 
+automatically calculates the exact minute-by-minute schedule, detects parallel 
+tasks, checks staff availability, and warns if the next surgery will be on time 
+or delayed.
+
+
+--------------------------------------------------------------------------------
+2. HOW THE FORWARD PLANNING AGENT WORKS
+--------------------------------------------------------------------------------
+Forward planning means we start at the beginning time (when previous surgery ends) 
+and move forward in time step-by-step, checking rules at every minute:
+
+Rule 1 - Dependency Rule: 
+  A task cannot begin until all prerequisite tasks are 100% finished.
+  (Example: You cannot set up sterile instruments before they have finished cooling.)
+
+Rule 2 - Staff Availability Rule:
+  A task cannot begin unless the required staff member is on duty.
+  (If the cleaning staff is marked absent, the plan is flagged as INFEASIBLE.)
+
+Rule 3 - No Double-Booking Rule:
+  One staff member cannot do two different jobs at the same time.
+  (If Support Staff is restocking, they cannot transfer the patient simultaneously.)
+
+Rule 4 - Parallel Execution Rule:
+  If two tasks have their prerequisites met and use different staff members, 
+  they can run at the same time to save valuable minutes!
+  (Example: Cleaning the room and sterilising instruments can happen in parallel.)
+
+Rule 5 - Patient Readiness Rule:
+  The patient cannot be moved into the OT until both the patient is ready in 
+  pre-op holding AND the OT room setup is completely finished.
+
+
+--------------------------------------------------------------------------------
+3. THE 9 WORKFLOW TASKS IN EVERY PLAN
+--------------------------------------------------------------------------------
+Task ID | Task Name                  | Duration    | Assigned Staff     | Prerequisite
+--------|----------------------------|-------------|--------------------|--------------
+T1      | Previous Surgery End       | 0 min       | N/A                | None (Start)
+T2      | Clean Operation Theatre    | 20-50 min   | Cleaning Staff     | T1
+T3      | Sterilise Instruments      | 30 min      | Sterilisation Staff| T1
+T4      | Mandatory Cooling/Waiting  | 10 min      | Passive (No staff) | T3
+T5      | Restock OT Supplies        | 15 min      | Support Staff      | T2
+T6      | Set Up Surgical Instruments| 15 min      | OT Nurse           | T4 and T5
+T7      | Check Patient Readiness    | 0 min       | Pre-op Holding     | None
+T8      | Transfer Patient to OT     | 10 min      | Support + Nurse    | T6 and T7
+T9      | Confirm OT Ready & Handover| 0 min       | OT Nurse           | T8 (Complete)
+
+
+--------------------------------------------------------------------------------
+4. HOW THE SYSTEM DECIDES THE FINAL STATUS
+--------------------------------------------------------------------------------
+The algorithm calculates:
+- Calculated Start Time = The exact time Task T8 finishes and T9 completes.
+- Delay = Maximum(0, Calculated Start Time - Scheduled Start Time).
+
+Status Output:
+1. "ON TIME"   -> If Calculated Start Time <= Next Surgery Scheduled Time.
+2. "DELAYED"   -> If Calculated Start Time > Next Surgery Scheduled Time (shows delay in minutes).
+3. "INFEASIBLE"-> If a required staff member is absent and no qualified substitute exists.
+
+
+--------------------------------------------------------------------------------
+5. TECHNOLOGY STACK (EXACTLY AS REQUIRED)
+--------------------------------------------------------------------------------
+A. Frontend (User Interface):
+   - Next.js 14 + React 18 + TypeScript (modern web framework)
+   - Tailwind CSS (clean, minimal hospital palette: Navy Blue #183153, White #FFFFFF, Light Grey #F4F6F8)
+   - Recharts (charts and visual comparison graphs)
+   - Lucide React (clean medical and UI icons)
+   - Hosted on: Vercel
+
+B. Backend (Logic & Planning Engine):
+   - Python 3.11+ with FastAPI
+   - Deterministic forward planning agent (planner.py, scheduler.py, staff_manager.py)
+   - Pydantic V2 (input data validation)
+   - SQLAlchemy 2.0 (ORM database connection)
+   - 15 automated pytest tests
+   - Hosted on: Render
+
+C. Database (Data Storage):
+   - Neon Serverless PostgreSQL (cloud relational database)
+   - Automatic connection pooling and SSL encryption
+   - Local fallback: SQLite (for offline testing without internet)
+
+
+--------------------------------------------------------------------------------
+6. THE 6 PAGES ON THE WEB DASHBOARD
+--------------------------------------------------------------------------------
+1. Dashboard (/)
+   - Shows live statistics: Total plans, On-time surgeries, Delayed count, Average turnaround.
+   - Current OT readiness status card and upcoming surgery alert.
+   - Recent plans summary table with 1-click links.
+
+2. Create Turnaround Plan (/create)
+   - Clean form divided into 5 sections:
+     A. Surgery Times (previous end, next scheduled, patient ready).
+     B. Cleaning Protocol (Normal 20 min vs Deep cleaning 50 min).
+     C. Sterilisation & Cooling duration.
+     D. Restocking, Setup & Patient Transfer duration.
+     E. Staff Availability toggles (Cleaning, Sterilisation, OT Nurse, Support Staff).
+   - "Generate Turnaround Plan" button calls the Python forward planner.
+
+3. Generated Turnaround Plan & Gantt (/plan/[id])
+   - Visual interactive Gantt chart showing the full timeline.
+   - Parallel tasks indicator (shows which tasks overlap safely).
+   - Staff conflicts and assignments breakdown.
+   - Big status badge (ON TIME / DELAYED / INFEASIBLE).
+
+4. Scenario Comparison (/scenarios)
+   - Runs 4 standard clinical cases simultaneously:
+     Case 1: Normal cleaning + All staff available (Best Case)
+     Case 2: Deep cleaning + All staff available (Decontamination Case)
+     Case 3: Normal cleaning + Staff member missing (Staff Shortage Case)
+     Case 4: Deep cleaning + Staff member missing (Worst Case)
+   - Recharts bar chart comparing turnaround durations side-by-side.
+
+5. Medical Handover Report (/reports/[id])
+   - Formal hospital handover audit summary.
+   - "Download CSV Report" button for hospital record-keeping.
+
+6. Plan History (/history)
+   - Searchable and filterable archive of all past surgery plans.
+   - Filter by status (All, On Time, Delayed, Infeasible).
+
+
+--------------------------------------------------------------------------------
+7. PROJECT DIRECTORY STRUCTURE
+--------------------------------------------------------------------------------
+d:\fai micro [roject\OT_Turnaround_Planner\
+|-- backend\                      # Python FastAPI planning engine
+|   |-- main.py                   # REST API routes (/api/plans, /health, etc.)
+|   |-- planner.py                # High-level forward planning coordinator
+|   |-- scheduler.py              # Forward scheduling agent algorithm
+|   |-- staff_manager.py          # Staff interval-booking & conflict detector
+|   |-- cleaning.py               # Cleaning protocol definitions
+|   |-- sterilisation.py          # Autoclave & cooling cycle rules
+|   |-- models.py                 # SQLAlchemy database tables
+|   |-- schemas.py                # Pydantic data models
+|   |-- crud.py                   # Database queries & stats calculator
+|   |-- database.py               # Neon PostgreSQL / SQLite connection
+|   |-- report.py                 # Summary & CSV audit generator
+|   |-- seed_data.py              # Auto-seeds 5 realistic demonstration plans
+|   |-- requirements.txt          # Python dependencies
+|   `-- tests\                    # 15 automated pytest test cases
+|       |-- test_planner.py       # 10 unit tests for scheduling invariants
+|       `-- test_api.py           # 5 integration tests for API endpoints
+|-- frontend\                     # Next.js 14 web application
+|   |-- app\                      # Next.js App Router (6 pages)
+|   |   |-- page.tsx              # Page 1: Dashboard
+|   |   |-- create\page.tsx       # Page 2: Create Turnaround Plan
+|   |   |-- plan\[id]\page.tsx    # Page 3: Generated Plan & Gantt
+|   |   |-- scenarios\page.tsx    # Page 4: 4-Scenario Comparison
+|   |   |-- reports\[id]\page.tsx # Page 5: Final Report & CSV
+|   |   `-- history\page.tsx      # Page 6: Plan History
+|   |-- components\               # Reusable UI widgets (GanttChart, Navbar, Badges)
+|   |-- lib\api.ts                # Axios/fetch API client to FastAPI
+|   `-- package.json              # Frontend npm dependencies
+|-- render.yaml                   # 1-click cloud deploy configuration for Render
+|-- README.md                     # GitHub documentation & setup guide
+|-- PROJECT_REPORT.md             # Formal academic project report
+|-- PROJECT_PLAN.txt              # This plain text overview
+`-- start_app.bat                 # 1-click launcher for Windows (starts frontend + backend)
+
+
+--------------------------------------------------------------------------------
+8. HOW TO RUN THE PROJECT LOCALLY (IN 5 SECONDS)
+--------------------------------------------------------------------------------
+1. Open File Explorer to:
+   d:\fai micro [roject\OT_Turnaround_Planner\
+2. Double-click on:
+   start_app.bat
+3. Both servers will start automatically:
+   - Frontend: http://localhost:3000
+   - Backend:  http://localhost:8000
+   - Swagger:  http://localhost:8000/docs
+4. Your browser will open straight to the dashboard!
+
+
+--------------------------------------------------------------------------------
+9. HOW TO PUBLISH IT TO CLOUD (VERCEL + RENDER + NEON)
+--------------------------------------------------------------------------------
+The project is already pushed to GitHub:
+https://github.com/austin13519j-rgb/FAI-Micro-Project
+
+To publish live:
+1. Neon (Database):
+   - Sign up at neon.tech -> Create project "ot-turnaround-db" -> Copy PostgreSQL URL.
+2. Render (Backend):
+   - Sign up at render.com -> New Web Service -> Connect FAI-Micro-Project.
+   - Root directory: "backend"
+   - Build: "pip install -r requirements.txt"
+   - Start: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+   - Environment Variable: DATABASE_URL = (paste Neon URL)
+   - Copy your Render backend URL (e.g. https://your-backend.onrender.com).
+3. Vercel (Frontend):
+   - Sign up at vercel.com -> Import FAI-Micro-Project.
+   - Root directory: "frontend"
+   - Environment Variable: NEXT_PUBLIC_API_URL = (paste Render backend URL)
+   - Click Deploy!
+
+
+--------------------------------------------------------------------------------
+10. COMMON VIVA / EVALUATION QUESTIONS & ANSWERS
+--------------------------------------------------------------------------------
+Q1: Why is this called "Forward Planning"?
+A1: Because the algorithm starts from an initial known time (when the previous 
+    surgery completes) and applies forward state progression, adding actions 
+    whose preconditions are satisfied until the goal state (OT ready & patient 
+    transferred) is reached.
+
+Q2: Why not use Machine Learning or Deep Learning for this?
+A2: Medical and surgical scheduling requires 100% deterministic safety guarantees. 
+    A neural network might hallucinate or violate a mandatory cooling waiting time. 
+    Rule-based deterministic forward planning guarantees that zero safety rules 
+    and zero staffing conflicts are ever violated.
+
+Q3: How does the system handle parallel tasks?
+A3: When a task finishes, the scheduler checks which uncompleted tasks have all 
+    their prerequisites completed. If two such tasks require different staff 
+    members (like Cleaning using Cleaning Staff and Sterilisation using Sterilisation 
+    Staff), both are scheduled to start at the exact same minute.
+
+Q4: What happens if a staff member is absent?
+A4: The staff manager verifies required qualifications. If an essential role 
+    (like OT Nurse) is marked unavailable and cannot be staffed, the planner 
+    immediately halts with an explicit "INFEASIBLE - RESOURCE CONSTRAINT" status 
+    instead of producing a dangerous or false schedule.
+================================================================================

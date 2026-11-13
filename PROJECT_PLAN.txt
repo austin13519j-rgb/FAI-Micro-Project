@@ -257,3 +257,4 @@ A4: The staff manager verifies required qualifications. If an essential role
     immediately halts with an explicit "INFEASIBLE - RESOURCE CONSTRAINT" status 
     instead of producing a dangerous or false schedule.
 ================================================================================
+
